@@ -7,31 +7,36 @@ public class Main {
     public static void main(String[] args) {
         entrada = new Scanner(System.in);
         int acao;
+        boolean isInitialized = false;
 
         while (true) {
             System.out.println("\n");
             System.out.println("Digite uma opção:");
-            System.out.println("1 - INICIALIZA");
+            if (!isInitialized) System.out.println("1 - INICIALIZA");
             System.out.println("2 - SEARCH");
             acao = Integer.parseInt(entrada.nextLine());
 
             switch (acao) {
                 case 1: {
+                    if (isInitialized) {
+                      System.out.println("\nO peer encontra-se inicializado.");
+                      break;
+                    }  
                     // Pega IP e Porta
-
                     System.out.println("\nInforme o IP:PORTA");
                     String peerInfos = entrada.nextLine();
                     String[] peerInfosSplited = peerInfos.split(":");
                     String ip = peerInfosSplited[0];
                     int porta = Integer.parseInt(peerInfosSplited[1]);
 
-                    System.out.println("\nInforme o IP:PORTA de outro peer");
+                    System.out.println("\nNecessario informar dois vizinhos");
+                    System.out.println("\nInforme o IP:PORTA do primeiro vizinho");
                     String peerInfosX = entrada.nextLine();
                     String[] peerInfosXSplited = peerInfosX.split(":");
                     String ipX = peerInfosXSplited[0];
                     int portaX = Integer.parseInt(peerInfosXSplited[1]);
 
-                    System.out.println("\nInforme o IP:PORTA de outro peer");
+                    System.out.println("\nInforme o IP:PORTA do segundo vizinho");
                     String peerInfosY = entrada.nextLine();
                     String[] peerInfosYSplited = peerInfosY.split(":");
                     String ipY = peerInfosYSplited[0];
@@ -46,6 +51,10 @@ public class Main {
                     for (File arquivo : arquivos) {
                         System.out.println(arquivo.getName());
                     }
+
+                    // Seta estado de inicializado como "true"
+                    isInitialized = true;
+                        
 
                     break;
                 }
