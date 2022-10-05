@@ -1,16 +1,31 @@
 import java.util.Scanner;
 import java.io.File;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+
 
 public class Main {
     private static Scanner entrada;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         entrada = new Scanner(System.in);
         int acao;
+        // Variavel de estado para inicializacao
         boolean isInitialized = false;
 
+        // Array para armazenamento dos vizinhos
+        String[] peers;
+        peers = new String[2];
+        
+        // Cria o clientSocket
+        DatagramSocket clientSocket = new DatagramSocket();
+
+        // declaração e preenchimento do buffer de envio
+        byte[] sendData = new byte[1024];
+
         while (true) {
-            System.out.println("\n");
+            System.out.println("\nMenu de acoes.");
             System.out.println("Digite uma opção:");
             if (!isInitialized) System.out.println("1 - INICIALIZA");
             System.out.println("2 - SEARCH");
@@ -31,16 +46,10 @@ public class Main {
 
                     System.out.println("\nNecessario informar dois vizinhos");
                     System.out.println("\nInforme o IP:PORTA do primeiro vizinho");
-                    String peerInfosX = entrada.nextLine();
-                    String[] peerInfosXSplited = peerInfosX.split(":");
-                    String ipX = peerInfosXSplited[0];
-                    int portaX = Integer.parseInt(peerInfosXSplited[1]);
+                    peers[0] = entrada.nextLine();
 
                     System.out.println("\nInforme o IP:PORTA do segundo vizinho");
-                    String peerInfosY = entrada.nextLine();
-                    String[] peerInfosYSplited = peerInfosY.split(":");
-                    String ipY = peerInfosYSplited[0];
-                    int portaY = Integer.parseInt(peerInfosYSplited[1]);
+                    peers[1] = entrada.nextLine();
 
                     System.out.println("\nDigite o diretório onde se encontram os arquivos:");
                     String nomeDiretorio = entrada.nextLine();
@@ -52,6 +61,8 @@ public class Main {
                         System.out.println(arquivo.getName());
                     }
 
+                    // Cria socket
+                    DatagramSocket serverSocket = new DatagramSocket(porta);
                     // Seta estado de inicializado como "true"
                     isInitialized = true;
                         
@@ -59,6 +70,23 @@ public class Main {
                     break;
                 }
                 case 2: {
+                  
+                    if (!isInitialized) {
+                      System.out.println("\nNecessario realizar inicializacao. Para isso, digite 1 no menu de acoes.");
+                      break;
+                    }
+
+                    // Seleciona um vizinho aleatoriamente
+                    int numeroPeer = (int)Math.round(Math.random());
+                    System.out.println(peers);
+                    String[] peerInfos = peers[numeroPeer].split(":");
+                    String peerIp = peerInfos[0];
+                    int peerPorta = Integer.parseInt(peerInfos[1]);
+                    
+                    // Criação do datagrama com endereço e porta do host remoto
+                    // DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(peerIp), peerPorta);
+                  
+                    // clientSocket.send(sendPacket);
                     break;
                 }
             }

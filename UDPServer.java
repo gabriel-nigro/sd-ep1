@@ -8,7 +8,7 @@ public class UDPServer {
 
         while (true) {
             try {
-                // Declaração do buffer de recebimento
+            // Declaração do buffer de recebimento
             byte[] recBuffer = new byte[1024];
 
             // Criação do datagrama a ser recebido
