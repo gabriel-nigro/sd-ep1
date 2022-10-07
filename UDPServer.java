@@ -19,11 +19,15 @@ public class UDPServer {
             // Recebimento do datagrama do host remoto (método bloqueante)
             serveSocket.receive(recPkt);
 
+            System.out.println("bloqueou");
+
             ByteArrayInputStream in = new ByteArrayInputStream(recPkt.getData());
             ObjectInputStream is = new ObjectInputStream(in);
-            System.out.println(is.readObject().getClass());
+
+            Mensagem msg = (Mensagem)is.readObject();
+
+            System.out.println("O arquivo é: " + msg.getArquivo());
             
-            System.out.println( "Recebi a mensagem!");
 
             /*byte[] sendBuf = new byte[1024];
             sendBuf =  "sou o servidor".getBytes();

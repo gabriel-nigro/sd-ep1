@@ -1,16 +1,17 @@
 // Lib para leitura de input do usuário
 import java.util.Scanner;
-import java.io.ByteArrayOutputStream;
 // Lib para leitura de arquivos
 import java.io.File;
-import java.io.ObjectOutputStream;
 // Lib para lidar com arrays
 import java.util.ArrayList;
-// Libs para socker
+// Libs para socket
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-
+import java.io.ObjectOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.SocketException;
 // Libs para print periódico
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
