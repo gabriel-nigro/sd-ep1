@@ -1,3 +1,4 @@
+
 // Lib para leitura de input do usuário
 import java.util.Scanner;
 // Lib para leitura de arquivos
@@ -12,6 +13,9 @@ import java.io.ObjectOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.SocketException;
+import java.nio.file.Files;
+import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
 // Libs para print periódico
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,13 +29,13 @@ public class Main {
         String ip = infosSplited[0];
         return ip;
     }
-    
+
     static int getPorta(String peerInfos) {
         String[] infosSplited = peerInfos.split(":");
         int porta = Integer.parseInt(infosSplited[1]);
         return porta;
     }
-    
+
     static void leArquivos(String nomeDiretorio) {
         File diretorio = new File(nomeDiretorio);
         File arquivos[] = diretorio.listFiles();
@@ -43,6 +47,129 @@ public class Main {
         System.out.print("\n");
     }
 
+    public static boolean verificaArquivo(String nomeDiretorio, String nomeArquivo) {
+        File arquivo = new File(nomeDiretorio + "/" + nomeArquivo);
+        return arquivo.isFile() ? true : false;
+    }
+
+    public static File getArquivo(String nomeDiretorio, String nomeArquivo) {
+        File arquivo = new File(nomeDiretorio + nomeArquivo);
+        return arquivo;
+    }
+
+    public static void iniciaSocket(int port, String diretorio, DatagramSocket clientSocket, String serverInfos) {
+        (new Thread() {
+            @Override
+            public void run() {
+                DatagramSocket socket = null;
+                try {
+                    // Cria o socket
+                    socket = new DatagramSocket(port);
+
+                } catch (SocketException ex) {
+                    ex.printStackTrace();
+                }
+                // Declaração do buffer de recebimento
+                byte[] recBuffer = new byte[1024];
+
+                // Criação do datagrama a ser recebido
+                DatagramPacket recPkt = new DatagramPacket(recBuffer, recBuffer.length);
+
+                while (true) {
+                    try {
+                        socket.receive(recPkt);
+
+                        // Transforma o pacote em uma instância da classe Mensagem.
+                        ByteArrayInputStream in = new ByteArrayInputStream(recPkt.getData());
+                        ObjectInputStream is = new ObjectInputStream(in);
+                        Mensagem msg = (Mensagem) is.readObject();
+                        if (msg.getIsResponse()) {
+                            if (msg.getConteudoArquivo() != null) {
+                                File novoArquivo = new File(diretorio + "/" + msg.getNomeArquivo());
+                                Files.copy(msg.getConteudoArquivo().toPath(), novoArquivo.toPath());
+                                System.out.println("peer com arquivo procurado: " + msg.getPeerResponse() + " " + msg.getNomeArquivo());
+                            } else {
+                                System.out.println("ninguem no sistema possui o arquivo " + msg.getNomeArquivo());
+                            }
+                        } else {
+                            String arquivo = msg.getNomeArquivo();
+
+                            if (verificaArquivo(diretorio, arquivo)) {
+                                msg.setConteudoArquivo(getArquivo(diretorio, arquivo));
+                                msg.setIsResponse(true);
+                                msg.setPeerResponse(serverInfos);
+                                System.out.println("tem o arquivo");
+                                retornaMensagem(clientSocket, msg);
+                            } else {
+                                System.out.println("Não tem o arquivo");
+                            }
+                        }
+
+                    } catch (IOException | ClassNotFoundException ex) {
+                        ex.printStackTrace();
+                    }
+
+                }
+            }
+
+        }).start();
+    }
+
+    public static void enviaMensagem(DatagramSocket clientSocket, String serverInfos, String arquivoBuscado,
+            String ipDestino, int portaDestino) {
+        (new Thread() {
+            @Override
+            public void run() {
+                // Cria objeto de mensagem
+                Mensagem mensagem = new Mensagem(serverInfos, arquivoBuscado, false);
+                try {
+                    // declaração e preenchimento do buffer de envio
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
+                    ObjectOutputStream oos = new ObjectOutputStream(baos);
+                    oos.writeObject(mensagem);
+                    final byte[] sendMessage = baos.toByteArray();
+
+                    // Criação do datagrama com endereço e porta do host remoto
+                    DatagramPacket sendPacket = new DatagramPacket(sendMessage, sendMessage.length,
+                            InetAddress.getByName(ipDestino), portaDestino);
+
+                    clientSocket.send(sendPacket);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+        }).start();
+    }
+
+    public static void retornaMensagem(DatagramSocket clientSocket, Mensagem mensagem) throws IOException {
+        (new Thread() {
+            @Override
+            public void run() {
+                try {
+                    // declaração e preenchimento do buffer de envio
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
+                    ObjectOutputStream oos = new ObjectOutputStream(baos);
+                    oos.writeObject(mensagem);
+                    final byte[] sendMessage = baos.toByteArray();
+
+                    String ipDestino = getIp(mensagem.getSenderInfos());
+                    int portaDestino = getPorta(mensagem.getSenderInfos());
+
+                    // Criação do datagrama com endereço e porta do host remoto
+                    DatagramPacket sendPacket = new DatagramPacket(sendMessage, sendMessage.length,
+                            InetAddress.getByName(ipDestino), portaDestino);
+
+                    clientSocket.send(sendPacket);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+        }).start();
+    }
 
     static void periodicPrint(String peerInfos, String nomeDiretorio) {
         Runnable runnable = new Runnable() {
@@ -73,6 +200,9 @@ public class Main {
         // Variavel de estado para inicializacao
         boolean isInitialized = false;
 
+        // Armazenamento das informações do server
+        String serverInfos = null;
+
         // Array para armazenamento dos vizinhos
         String[] peers;
         peers = new String[2];
@@ -99,7 +229,7 @@ public class Main {
                     }
                     // Pega IP e Porta
                     System.out.println("\nInforme o IP:PORTA");
-                    String serverInfos = entrada.nextLine();
+                    serverInfos = entrada.nextLine();
 
                     System.out.println("\nNecessario informar dois vizinhos");
                     System.out.println("\nInforme o IP:PORTA do primeiro vizinho");
@@ -119,8 +249,8 @@ public class Main {
 
                     // Cria socket
                     int serverPorta = getPorta(serverInfos);
-                    DatagramSocket serverSocket = new DatagramSocket(serverPorta);
-                    
+                    iniciaSocket(serverPorta, nomeDiretorio, clientSocket, serverInfos);
+
                     // Seta estado de inicializado como "true"
                     isInitialized = true;
                     break;
@@ -135,26 +265,16 @@ public class Main {
 
                     // O arquivo desejado
                     System.out.println("\nDigite o arquivo com a sua extensão:");
-                    String arquivo = entrada.nextLine();
+                    String arquivoBuscado = entrada.nextLine();
 
                     // Seleciona um vizinho aleatoriamente
                     int numeroPeer = (int) Math.round(Math.random());
-                    String peerIp = getIp(peers[numeroPeer]);
-                    int peerPorta = getPorta(peers[numeroPeer]);
+                    String ipDestino = getIp(peers[numeroPeer]);
+                    int portaDestino = getPorta(peers[numeroPeer]);
 
-                    // Cria objeto de mensagem
-                    Mensagem mensagem = new Mensagem(peers[numeroPeer], arquivo);
+                    // Envia mensagem
+                    enviaMensagem(clientSocket, serverInfos, arquivoBuscado, ipDestino, portaDestino);
 
-                    // declaração e preenchimento do buffer de envio
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
-                    ObjectOutputStream oos = new ObjectOutputStream(baos);
-                    oos.writeObject(mensagem);
-                    final byte[] sendMessage = baos.toByteArray();
-
-                    // Criação do datagrama com endereço e porta do host remoto
-                    DatagramPacket sendPacket = new DatagramPacket(sendMessage, sendMessage.length, InetAddress.getByName(peerIp), peerPorta);
-
-                    clientSocket.send(sendPacket);
                     break;
                 }
             }
