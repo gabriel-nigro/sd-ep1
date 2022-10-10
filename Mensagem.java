@@ -1,6 +1,8 @@
 import java.io.Serializable;
 // Lib para leitura de arquivos
 import java.io.File;
+// Lib para utilização de Data
+import java.util.Date;
 
 public class Mensagem implements Serializable {
     private static final long serialVersionUID = 6529685098267757690L;
@@ -11,11 +13,15 @@ public class Mensagem implements Serializable {
     private File conteudoArquivo;
     private boolean isResponse;
     private String peerResponse;
+    private Date horarioDeEnvio;
+    private boolean isTimeout;
 
-    public Mensagem(String senderInfos, String arquivo, boolean isResponse) {
+    public Mensagem(String senderInfos, String arquivo, boolean isResponse, boolean isTimeout) {
         this.senderInfos = senderInfos;
         this.nomeArquivo = arquivo;
         this.isResponse = isResponse;
+        this.isTimeout = isTimeout;
+        horarioDeEnvio = new Date();
     }
 
     public String getSenderInfos() {
@@ -52,6 +58,18 @@ public class Mensagem implements Serializable {
 
     public void setPeerResponse(String peerResponse) {
         this.peerResponse = peerResponse;
+    }
+
+    public Date getHorarioDeEnvio() {
+        return this.horarioDeEnvio;
+    }
+
+    public boolean getIsTimeout() {
+        return this.isResponse;
+    }
+
+    public void setIsTimeout(Boolean isTimeout) {
+        this.isTimeout = isTimeout;
     }
 
 }

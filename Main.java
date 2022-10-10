@@ -20,6 +20,11 @@ import java.io.ObjectInputStream;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+// Lib para validar input do usuário
+import java.util.regex.Pattern;
+// Lib para timeout de requisição, caso ninguém possua o arquivo
+import java.util.Date;
+import static java.util.concurrent.TimeUnit.*;
 
 public class Main {
     private static Scanner entrada;
@@ -34,6 +39,15 @@ public class Main {
         String[] infosSplited = peerInfos.split(":");
         int porta = Integer.parseInt(infosSplited[1]);
         return porta;
+    }
+
+    static boolean infoValida(String peerInfos) {
+        Pattern pattern = Pattern
+                .compile("^(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5]):[0-9]{1,5}$");
+        boolean isValid = pattern.matcher(peerInfos).matches();
+        if (!isValid)
+            System.out.println("Informações inválidas. A formatação deve ser IP:PORTA");
+        return isValid;
     }
 
     static void leArquivos(String nomeDiretorio) {
@@ -53,11 +67,23 @@ public class Main {
     }
 
     public static File getArquivo(String nomeDiretorio, String nomeArquivo) {
-        File arquivo = new File(nomeDiretorio + nomeArquivo);
+        File arquivo = new File(nomeDiretorio + "/" + nomeArquivo);
         return arquivo;
     }
 
-    public static void iniciaSocket(int port, String diretorio, DatagramSocket clientSocket, String serverInfos) {
+    public static boolean verificaTimeoutMensagem(Date inicial) {
+        Date agora = new Date();
+
+        long tempoTimeout = MILLISECONDS.convert(30, SECONDS);
+
+        long duracao = agora.getTime() - inicial.getTime();
+
+        return duracao >= tempoTimeout ? true : false;
+            
+    }
+
+    public static void iniciaSocket(int port, String diretorio, DatagramSocket clientSocket, String serverInfos,
+            ArrayList<String> responses, String[] peers) {
         (new Thread() {
             @Override
             public void run() {
@@ -83,17 +109,39 @@ public class Main {
                         ByteArrayInputStream in = new ByteArrayInputStream(recPkt.getData());
                         ObjectInputStream is = new ObjectInputStream(in);
                         Mensagem msg = (Mensagem) is.readObject();
-                        if (msg.getIsResponse()) {
-                            if (msg.getConteudoArquivo() != null) {
-                                File novoArquivo = new File(diretorio + "/" + msg.getNomeArquivo());
-                                Files.copy(msg.getConteudoArquivo().toPath(), novoArquivo.toPath());
-                                System.out.println("peer com arquivo procurado: " + msg.getPeerResponse() + " " + msg.getNomeArquivo());
-                            } else {
-                                System.out.println("ninguem no sistema possui o arquivo " + msg.getNomeArquivo());
-                            }
-                        } else {
-                            String arquivo = msg.getNomeArquivo();
 
+                        // Se a mensagem recebida pelo socket é um response
+                        if (msg.getIsResponse()) {
+                            // Verifica se já fora realizada alguma busca para o arquivo informado
+                            boolean jaProcessada = false;
+                            for (String response : responses) {
+                                if (response.contains(msg.getNomeArquivo())) {
+                                    System.out.println("Requisição já processada para " + msg.getNomeArquivo());
+                                }
+                            }
+
+                            // Caso o response ainda não tenha sido processada
+                            if (!jaProcessada) {
+                                File novoArquivo = new File(diretorio + "/" + msg.getNomeArquivo());
+                                System.out.println("Path: " + msg.getConteudoArquivo().getAbsolutePath());
+                                Files.copy(msg.getConteudoArquivo().toPath(), novoArquivo.toPath());
+                                System.out.println("peer com arquivo procurado: " + msg.getPeerResponse() + " "
+                                        + msg.getNomeArquivo());
+                                responses.add(msg.getNomeArquivo());
+                            }
+
+                        } else if (msg.getIsTimeout()) {
+                            System.out.println("ninguém no sistema possui o arquivo " + msg.getNomeArquivo());
+                        } else {
+                            if (verificaTimeoutMensagem(msg.getHorarioDeEnvio())) {
+                                msg.setIsResponse(false);
+                                msg.setIsTimeout(true);
+                                retornaMensagem(clientSocket, msg);
+                            }
+                            // Se a mensagem recebida pelo socket é de procura do arquivo
+                            String arquivo = msg.getNomeArquivo();
+                            // Verifica se o arquivo existe no diretório informado na inicialização
+                            // Caso exista, o mesmo é enviado para o peer solicitante
                             if (verificaArquivo(diretorio, arquivo)) {
                                 msg.setConteudoArquivo(getArquivo(diretorio, arquivo));
                                 msg.setIsResponse(true);
@@ -101,7 +149,14 @@ public class Main {
                                 System.out.println("tem o arquivo");
                                 retornaMensagem(clientSocket, msg);
                             } else {
-                                System.out.println("Não tem o arquivo");
+                                System.out.println("Não tenho " + msg.getNomeArquivo());
+                                // Seleciona um vizinho aleatoriamente
+                                int numeroPeer = (int) Math.round(Math.random());
+                                String ipDestino = getIp(peers[numeroPeer]);
+                                int portaDestino = getPorta(peers[numeroPeer]);
+
+                                // Envia mensagem
+                                encaminhaMensagem(clientSocket, msg, ipDestino, portaDestino);
                             }
                         }
 
@@ -121,7 +176,7 @@ public class Main {
             @Override
             public void run() {
                 // Cria objeto de mensagem
-                Mensagem mensagem = new Mensagem(serverInfos, arquivoBuscado, false);
+                Mensagem mensagem = new Mensagem(serverInfos, arquivoBuscado, false, false);
                 try {
                     // declaração e preenchimento do buffer de envio
                     ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
@@ -156,6 +211,31 @@ public class Main {
 
                     String ipDestino = getIp(mensagem.getSenderInfos());
                     int portaDestino = getPorta(mensagem.getSenderInfos());
+
+                    // Criação do datagrama com endereço e porta do host remoto
+                    DatagramPacket sendPacket = new DatagramPacket(sendMessage, sendMessage.length,
+                            InetAddress.getByName(ipDestino), portaDestino);
+
+                    clientSocket.send(sendPacket);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+        }).start();
+    }
+
+    public static void encaminhaMensagem(DatagramSocket clientSocket, Mensagem mensagem, String ipDestino, int portaDestino) throws IOException {
+        (new Thread() {
+            @Override
+            public void run() {
+                try {
+                    // declaração e preenchimento do buffer de envio
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
+                    ObjectOutputStream oos = new ObjectOutputStream(baos);
+                    oos.writeObject(mensagem);
+                    final byte[] sendMessage = baos.toByteArray();
 
                     // Criação do datagrama com endereço e porta do host remoto
                     DatagramPacket sendPacket = new DatagramPacket(sendMessage, sendMessage.length,
@@ -210,8 +290,9 @@ public class Main {
         // Variável para salvar o diretório monitorado
         String nomeDiretorio = null;
 
-        // Array para armazenamento de response
+        // Array para armazenamento de histórico de pesquisa e response
         ArrayList<String> historicoSearch = new ArrayList<String>();
+        ArrayList<String> responses = new ArrayList<String>();
 
         // Cria o clientSocket
         DatagramSocket clientSocket = new DatagramSocket();
@@ -233,13 +314,19 @@ public class Main {
                     // Pega IP e Porta
                     System.out.println("\nInforme o IP:PORTA");
                     serverInfos = entrada.nextLine();
+                    if (!infoValida(serverInfos))
+                        break;
 
                     System.out.println("\nNecessario informar dois vizinhos");
                     System.out.println("\nInforme o IP:PORTA do primeiro vizinho");
                     peers[0] = entrada.nextLine();
+                    if (!infoValida(peers[0]))
+                        break;
 
                     System.out.println("\nInforme o IP:PORTA do segundo vizinho");
                     peers[1] = entrada.nextLine();
+                    if (!infoValida(peers[1]))
+                        break;
 
                     System.out.println("\nDigite o diretório onde se encontram os arquivos:");
                     nomeDiretorio = entrada.nextLine();
@@ -252,7 +339,7 @@ public class Main {
 
                     // Cria socket
                     int serverPorta = getPorta(serverInfos);
-                    iniciaSocket(serverPorta, nomeDiretorio, clientSocket, serverInfos);
+                    iniciaSocket(serverPorta, nomeDiretorio, clientSocket, serverInfos, responses, peers);
 
                     // Seta estado de inicializado como "true"
                     isInitialized = true;

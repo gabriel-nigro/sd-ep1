@@ -1,13 +1,22 @@
 import java.io.File;
+import java.util.Date;
+import static java.util.concurrent.TimeUnit.*;
 
 public class Fio {
-    public static void main(String[] args) {
-        String diretorio = "peer1";
-        String arquivo = "abobora.js";
-        File tempFile = new File(diretorio + "/" + arquivo);
+    public static void main(String[] args) throws InterruptedException {
+        Date previous = new Date();
 
-        boolean exists = tempFile.exists();
+        //Pause for 4 seconds
+        Thread.sleep(2000);
 
-        System.out.println("Existe? " + exists);
+        Date now = new Date();
+
+        long MAX_DURATION = MILLISECONDS.convert(3, SECONDS);
+
+        long duration = now.getTime() - previous.getTime();
+
+        if (duration >= MAX_DURATION) {
+            System.out.println("Mais do que 3 segundos");
+        }
     }
 }
