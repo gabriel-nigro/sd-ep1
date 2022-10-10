@@ -13,6 +13,7 @@ import java.io.ObjectOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.SocketException;
+import java.nio.file.DirectoryIteratorException;
 import java.nio.file.Files;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
@@ -82,6 +83,22 @@ public class Main {
             
     }
 
+    public static void verificaResposta(String diretorio, String arquivo) {
+        (new Thread() {
+            @Override
+            public void run() {
+                //Pause for 4 seconds
+                try {
+                    Thread.sleep(2000);
+                    if (!verificaArquivo(diretorio, arquivo)) System.out.println("ninguém no sistema possui o arquivo " + arquivo);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+        }).start();
+    }
+
     public static void iniciaSocket(int port, String diretorio, DatagramSocket clientSocket, String serverInfos,
             ArrayList<String> responses, String[] peers) {
         (new Thread() {
@@ -123,7 +140,6 @@ public class Main {
                             // Caso o response ainda não tenha sido processada
                             if (!jaProcessada) {
                                 File novoArquivo = new File(diretorio + "/" + msg.getNomeArquivo());
-                                System.out.println("Path: " + msg.getConteudoArquivo().getAbsolutePath());
                                 Files.copy(msg.getConteudoArquivo().toPath(), novoArquivo.toPath());
                                 System.out.println("peer com arquivo procurado: " + msg.getPeerResponse() + " "
                                         + msg.getNomeArquivo());
@@ -154,6 +170,9 @@ public class Main {
                                 int numeroPeer = (int) Math.round(Math.random());
                                 String ipDestino = getIp(peers[numeroPeer]);
                                 int portaDestino = getPorta(peers[numeroPeer]);
+                                
+                                // Adiciona a si próprio na lista de peers procurados
+                                msg.addHistoricoPeer(serverInfos);
 
                                 // Envia mensagem
                                 encaminhaMensagem(clientSocket, msg, ipDestino, portaDestino);
@@ -381,6 +400,9 @@ public class Main {
 
                     // Adiciona no histórico
                     historicoSearch.add(arquivoBuscado);
+
+                    // Responde com timeout
+                    verificaResposta(nomeDiretorio, arquivoBuscado);
 
                     break;
                 }

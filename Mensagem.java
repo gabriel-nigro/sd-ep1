@@ -1,6 +1,8 @@
 import java.io.Serializable;
 // Lib para leitura de arquivos
 import java.io.File;
+// Lib para array de historico de peers
+import java.util.ArrayList;
 // Lib para utilização de Data
 import java.util.Date;
 
@@ -15,6 +17,7 @@ public class Mensagem implements Serializable {
     private String peerResponse;
     private Date horarioDeEnvio;
     private boolean isTimeout;
+    private ArrayList<String> historicoPeers;
 
     public Mensagem(String senderInfos, String arquivo, boolean isResponse, boolean isTimeout) {
         this.senderInfos = senderInfos;
@@ -65,11 +68,19 @@ public class Mensagem implements Serializable {
     }
 
     public boolean getIsTimeout() {
-        return this.isResponse;
+        return this.isTimeout;
     }
 
     public void setIsTimeout(Boolean isTimeout) {
         this.isTimeout = isTimeout;
+    }
+
+    public void addHistoricoPeer(String peer) {
+        this.historicoPeers.add(peer);
+    }
+
+    public ArrayList<String> getHistoricoPeer() {
+        return this.historicoPeers;
     }
 
 }
