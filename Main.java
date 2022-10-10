@@ -49,7 +49,7 @@ public class Main {
 
     public static boolean verificaArquivo(String nomeDiretorio, String nomeArquivo) {
         File arquivo = new File(nomeDiretorio + "/" + nomeArquivo);
-        return arquivo.isFile() ? true : false;
+        return arquivo.isFile() && arquivo.exists() ? true : false;
     }
 
     public static File getArquivo(String nomeDiretorio, String nomeArquivo) {
@@ -207,8 +207,11 @@ public class Main {
         String[] peers;
         peers = new String[2];
 
+        // Variável para salvar o diretório monitorado
+        String nomeDiretorio = null;
+
         // Array para armazenamento de response
-        ArrayList<String> responses = new ArrayList<String>();
+        ArrayList<String> historicoSearch = new ArrayList<String>();
 
         // Cria o clientSocket
         DatagramSocket clientSocket = new DatagramSocket();
@@ -239,7 +242,7 @@ public class Main {
                     peers[1] = entrada.nextLine();
 
                     System.out.println("\nDigite o diretório onde se encontram os arquivos:");
-                    String nomeDiretorio = entrada.nextLine();
+                    nomeDiretorio = entrada.nextLine();
 
                     System.out.print("\narquivos da pasta: ");
                     leArquivos(nomeDiretorio);
@@ -267,6 +270,20 @@ public class Main {
                     System.out.println("\nDigite o arquivo com a sua extensão:");
                     String arquivoBuscado = entrada.nextLine();
 
+                    // Verifica se o arquivo já existe
+                    if (verificaArquivo(nomeDiretorio, arquivoBuscado)) {
+                        System.out.println("O peer já possui o arquivo.");
+                        break;
+                    }
+
+                    // Verifica se já fora realizada alguma busca para o arquivo informado
+                    for (String historico : historicoSearch) {
+                        if (historico.contains(arquivoBuscado)) {
+                            System.out.println("Requisição já processada para " + arquivoBuscado);
+                            break;
+                        }
+                    }
+
                     // Seleciona um vizinho aleatoriamente
                     int numeroPeer = (int) Math.round(Math.random());
                     String ipDestino = getIp(peers[numeroPeer]);
@@ -274,6 +291,9 @@ public class Main {
 
                     // Envia mensagem
                     enviaMensagem(clientSocket, serverInfos, arquivoBuscado, ipDestino, portaDestino);
+
+                    // Adiciona no histórico
+                    historicoSearch.add(arquivoBuscado);
 
                     break;
                 }
