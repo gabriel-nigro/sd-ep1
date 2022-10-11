@@ -17,13 +17,14 @@ public class Mensagem implements Serializable {
     private String peerResponse;
     private Date horarioDeEnvio;
     private boolean isTimeout;
-    private ArrayList<String> historicoPeers;
+    private ArrayList<String> historicoPeers =  new ArrayList<String>();
 
     public Mensagem(String senderInfos, String arquivo, boolean isResponse, boolean isTimeout) {
         this.senderInfos = senderInfos;
         this.nomeArquivo = arquivo;
         this.isResponse = isResponse;
         this.isTimeout = isTimeout;
+        this.historicoPeers.add(senderInfos);
         horarioDeEnvio = new Date();
     }
 

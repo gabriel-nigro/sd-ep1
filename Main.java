@@ -89,7 +89,7 @@ public class Main {
             public void run() {
                 //Pause for 4 seconds
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(30000);
                     if (!verificaArquivo(diretorio, arquivo)) System.out.println("ninguém no sistema possui o arquivo " + arquivo);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -168,14 +168,43 @@ public class Main {
                                 System.out.println("Não tenho " + msg.getNomeArquivo());
                                 // Seleciona um vizinho aleatoriamente
                                 int numeroPeer = (int) Math.round(Math.random());
-                                String ipDestino = getIp(peers[numeroPeer]);
-                                int portaDestino = getPorta(peers[numeroPeer]);
                                 
-                                // Adiciona a si próprio na lista de peers procurados
-                                msg.addHistoricoPeer(serverInfos);
 
-                                // Envia mensagem
-                                encaminhaMensagem(clientSocket, msg, ipDestino, portaDestino);
+                                // Cria controle de pesquisa
+                                boolean jaPesquisado = false;
+                                
+                                // Primeira tentativa
+                                for (String pesquisado : msg.getHistoricoPeer()) {
+                                    if (pesquisado.contains(peers[numeroPeer])) {
+                                        jaPesquisado = true;
+                                    }
+                                }
+
+                                // Muda o nó escolhido
+                                if (jaPesquisado) {
+                                    if (numeroPeer == 0) numeroPeer = 1;
+                                    else numeroPeer = 0;
+                                }
+
+                                // Segunda tentativa
+                                jaPesquisado = false;
+                                for (String pesquisado : msg.getHistoricoPeer()) {
+                                    if (pesquisado.contains(peers[numeroPeer])) {
+                                        jaPesquisado = true;
+                                    }
+                                }
+                                
+
+                                if (!jaPesquisado) {
+                                    String ipDestino = getIp(peers[numeroPeer]);
+                                    int portaDestino = getPorta(peers[numeroPeer]);
+                                    
+                                    // Adiciona a si próprio na lista de peers procurados
+                                    msg.addHistoricoPeer(serverInfos);
+
+                                    // Envia mensagem
+                                    encaminhaMensagem(clientSocket, msg, ipDestino, portaDestino);
+                                }
                             }
                         }
 
