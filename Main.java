@@ -3,6 +3,7 @@
 import java.util.Scanner;
 // Lib para leitura de arquivos
 import java.io.File;
+import java.nio.file.Files;
 // Lib para lidar com arrays
 import java.util.ArrayList;
 // Libs para socket
@@ -13,8 +14,6 @@ import java.io.ObjectOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.SocketException;
-import java.nio.file.DirectoryIteratorException;
-import java.nio.file.Files;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
 // Libs para print periódico
@@ -30,18 +29,30 @@ import static java.util.concurrent.TimeUnit.*;
 public class Main {
     private static Scanner entrada;
 
+    /* O método é responsável por obter o IP a partir de uma string no formato IPV4:PORTA
+     * @param peerInfos Informações de IP:PORTA de um peer.
+     * @return String O IP do peer.
+     */
     static String getIp(String peerInfos) {
         String[] infosSplited = peerInfos.split(":");
         String ip = infosSplited[0];
         return ip;
     }
 
+    /* O método é responsável por obter a porta a partir de uma string no formato IPV4:PORTA
+     * @param peerInfos Informações de IP:PORTA de um peer.
+     * @return int O IP do peer.
+     */
     static int getPorta(String peerInfos) {
         String[] infosSplited = peerInfos.split(":");
         int porta = Integer.parseInt(infosSplited[1]);
         return porta;
     }
 
+    /* O método é responsável por validar a string a partir de um regex IPV4:PORTA. O mesmo é utilizado para validar o input do usuário.
+     * @param peerInfos Informações de IP:PORTA de um peer.
+     * @return boolean O valor booleano para validar as informações.
+     */
     static boolean infoValida(String peerInfos) {
         Pattern pattern = Pattern
                 .compile("^(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5]):[0-9]{1,5}$");
@@ -51,6 +62,9 @@ public class Main {
         return isValid;
     }
 
+    /* O método é responsável por realizar a leitura dos arquivos, no padrão informado no EP.
+     * @param nomeDiretorio  
+     */
     static void leArquivos(String nomeDiretorio) {
         File diretorio = new File(nomeDiretorio);
         File arquivos[] = diretorio.listFiles();
@@ -62,16 +76,30 @@ public class Main {
         System.out.print("\n");
     }
 
+    /* O método é responsável por verificar se o arquivo existe no diretório informado.
+     * @param nomeDiretorio
+     * @param nomeArquivo  
+     * @return boolean O valor booleano referente a existência do arquivo.
+     */
     public static boolean verificaArquivo(String nomeDiretorio, String nomeArquivo) {
         File arquivo = new File(nomeDiretorio + "/" + nomeArquivo);
         return arquivo.isFile() && arquivo.exists() ? true : false;
     }
 
+    /* O método é responsável por retornar o arquivo informado.
+     * @param nomeDiretorio
+     * @param nomeArquivo  
+     * @return boolean O objeto de classe File
+     */
     public static File getArquivo(String nomeDiretorio, String nomeArquivo) {
         File arquivo = new File(nomeDiretorio + "/" + nomeArquivo);
         return arquivo;
     }
 
+    /* O método é responsável por verificar se a mensagem fora enviada a tempo suficiente para receber timeout, quandor recebido um pacote de response.
+     * @param inicial O momento de envio da mensagem
+     * @return boolean O valor booleano referente ao timeout.
+     */
     public static boolean verificaTimeoutMensagem(Date inicial) {
         Date agora = new Date();
 
@@ -83,14 +111,20 @@ public class Main {
             
     }
 
-    public static void verificaResposta(String diretorio, String arquivo) {
+    /* O método é responsável por indicar timeout na mensagem caso não seja recebido o pacote de response.
+     * Assim, é criada uma thread com sleep de 30 segundos, após esse tempo é verificada a presença do arquivo
+     * no diretorio do peer. Caso negativo, entende-se que houve um timeout.
+     * @param nomeDiretorio
+     * @param nomeArquivo
+     */
+    public static void verificaResposta(String nomeDiretorio, String nomeArquivo) {
         (new Thread() {
             @Override
             public void run() {
                 //Pause for 4 seconds
                 try {
                     Thread.sleep(30000);
-                    if (!verificaArquivo(diretorio, arquivo)) System.out.println("ninguém no sistema possui o arquivo " + arquivo);
+                    if (!verificaArquivo(nomeDiretorio, nomeArquivo)) System.out.println("ninguém no sistema possui o arquivo " + nomeArquivo);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -99,7 +133,25 @@ public class Main {
         }).start();
     }
 
-    public static void iniciaSocket(int port, String diretorio, DatagramSocket clientSocket, String serverInfos,
+    /* O método é responsável por iniciar o socket no peer. As funcionalidades presentes são as seguintes:
+     * - Inicialização do socket via "new DatagramSocket"
+     * - Recebimento de pacotes
+     * - Verificar se a mensagem recebida no pacote é um response, através da propriedade isResponse da classe Mensagem.
+     *   - Caso positivo, verifica-se se a mensagem já fora processada, através do array de responses.
+     *   - Caso negativo, há a possibilidade de ser um timeout ou o encaminhamento para o próximo peer
+     *     - É verificada a propriedade isTimeout da classe Mensagem, printando a mensagem descrita no EP
+     *     - Caso seja necessário encaminhar a mensagem para outros peers, leva-se em conta se a mensagem já fora
+     *       encaminhada para os peers "alvos", para que não haja disperdício de reprocessamento.
+     * Vale ressaltar que a inicialização utiliza-se do sistema de Threads.
+     * 
+     * @param port Valor inteiro para criação do socket na porta informada
+     * @param nomeDiretorio  
+     * @param clientSocket Socket para encaminhamento de mensagem para outros peers, seja para envio do arquivo ou para continuidade da procura
+     * @param serverInfos informações do servidor no formato IPV4:PORTA
+     * @param responses Respostas já recebidas pelo peer, para não processá-las novamente
+     * @param peers Vizinhos informados na inicialização
+     */
+    public static void iniciaSocket(int port, String nomeDiretorio, DatagramSocket clientSocket, String serverInfos,
             ArrayList<String> responses, String[] peers) {
         (new Thread() {
             @Override
@@ -118,6 +170,7 @@ public class Main {
                 // Criação do datagrama a ser recebido
                 DatagramPacket recPkt = new DatagramPacket(recBuffer, recBuffer.length);
 
+                // Recebimento contínuo de pacotes enviados por outros peers
                 while (true) {
                     try {
                         socket.receive(recPkt);
@@ -139,7 +192,7 @@ public class Main {
 
                             // Caso o response ainda não tenha sido processada
                             if (!jaProcessada) {
-                                File novoArquivo = new File(diretorio + "/" + msg.getNomeArquivo());
+                                File novoArquivo = new File(nomeDiretorio + "/" + msg.getNomeArquivo());
                                 Files.copy(msg.getConteudoArquivo().toPath(), novoArquivo.toPath());
                                 System.out.println("peer com arquivo procurado: " + msg.getPeerResponse() + " "
                                         + msg.getNomeArquivo());
@@ -158,8 +211,8 @@ public class Main {
                             String arquivo = msg.getNomeArquivo();
                             // Verifica se o arquivo existe no diretório informado na inicialização
                             // Caso exista, o mesmo é enviado para o peer solicitante
-                            if (verificaArquivo(diretorio, arquivo)) {
-                                msg.setConteudoArquivo(getArquivo(diretorio, arquivo));
+                            if (verificaArquivo(nomeDiretorio, arquivo)) {
+                                msg.setConteudoArquivo(getArquivo(nomeDiretorio, arquivo));
                                 msg.setIsResponse(true);
                                 msg.setPeerResponse(serverInfos);
                                 System.out.println("tem o arquivo");
@@ -194,7 +247,7 @@ public class Main {
                                     }
                                 }
                                 
-
+                                // Caso algum dos vizinhos ainda não tenha processado a mensagem
                                 if (!jaPesquisado) {
                                     String ipDestino = getIp(peers[numeroPeer]);
                                     int portaDestino = getPorta(peers[numeroPeer]);
