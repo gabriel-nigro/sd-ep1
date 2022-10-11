@@ -218,7 +218,6 @@ public class Main {
                                 System.out.println("tem o arquivo");
                                 retornaMensagem(clientSocket, msg);
                             } else {
-                                System.out.println("Não tenho " + msg.getNomeArquivo());
                                 // Seleciona um vizinho aleatoriamente
                                 int numeroPeer = (int) Math.round(Math.random());
                                 
@@ -244,6 +243,7 @@ public class Main {
                                 for (String pesquisado : msg.getHistoricoPeer()) {
                                     if (pesquisado.contains(peers[numeroPeer])) {
                                         jaPesquisado = true;
+                                        System.out.println("Não tenho " + msg.getNomeArquivo() + ", e meus vizinhos também não.");
                                     }
                                 }
                                 
@@ -254,7 +254,8 @@ public class Main {
                                     
                                     // Adiciona a si próprio na lista de peers procurados
                                     msg.addHistoricoPeer(serverInfos);
-
+                                    //
+                                    System.out.println("Não tenho " + msg.getNomeArquivo() + ", encaminhando para " + peers[numeroPeer]);
                                     // Envia mensagem
                                     encaminhaMensagem(clientSocket, msg, ipDestino, portaDestino);
                                 }
