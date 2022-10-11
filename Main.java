@@ -16,10 +16,6 @@ import java.io.IOException;
 import java.net.SocketException;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
-// Libs para print periódico
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 // Lib para validar input do usuário
 import java.util.regex.Pattern;
 // Lib para timeout de requisição, caso ninguém possua o arquivo
@@ -29,8 +25,12 @@ import static java.util.concurrent.TimeUnit.*;
 public class Main {
     private static Scanner entrada;
 
-    /* O método é responsável por obter o IP a partir de uma string no formato IPV4:PORTA
+    /*
+     * O método é responsável por obter o IP a partir de uma string no formato
+     * IPV4:PORTA
+     * 
      * @param peerInfos Informações de IP:PORTA de um peer.
+     * 
      * @return String O IP do peer.
      */
     static String getIp(String peerInfos) {
@@ -39,8 +39,12 @@ public class Main {
         return ip;
     }
 
-    /* O método é responsável por obter a porta a partir de uma string no formato IPV4:PORTA
+    /*
+     * O método é responsável por obter a porta a partir de uma string no formato
+     * IPV4:PORTA
+     * 
      * @param peerInfos Informações de IP:PORTA de um peer.
+     * 
      * @return int O IP do peer.
      */
     static int getPorta(String peerInfos) {
@@ -49,8 +53,12 @@ public class Main {
         return porta;
     }
 
-    /* O método é responsável por validar a string a partir de um regex IPV4:PORTA. O mesmo é utilizado para validar o input do usuário.
+    /*
+     * O método é responsável por validar a string a partir de um regex IPV4:PORTA.
+     * O mesmo é utilizado para validar o input do usuário.
+     * 
      * @param peerInfos Informações de IP:PORTA de um peer.
+     * 
      * @return boolean O valor booleano para validar as informações.
      */
     static boolean infoValida(String peerInfos) {
@@ -62,8 +70,11 @@ public class Main {
         return isValid;
     }
 
-    /* O método é responsável por realizar a leitura dos arquivos, no padrão informado no EP.
-     * @param nomeDiretorio  
+    /*
+     * O método é responsável por realizar a leitura dos arquivos, no padrão
+     * informado no EP.
+     * 
+     * @param nomeDiretorio
      */
     static void leArquivos(String nomeDiretorio) {
         File diretorio = new File(nomeDiretorio);
@@ -76,9 +87,14 @@ public class Main {
         System.out.print("\n");
     }
 
-    /* O método é responsável por verificar se o arquivo existe no diretório informado.
+    /*
+     * O método é responsável por verificar se o arquivo existe no diretório
+     * informado.
+     * 
      * @param nomeDiretorio
-     * @param nomeArquivo  
+     * 
+     * @param nomeArquivo
+     * 
      * @return boolean O valor booleano referente a existência do arquivo.
      */
     public static boolean verificaArquivo(String nomeDiretorio, String nomeArquivo) {
@@ -86,9 +102,13 @@ public class Main {
         return arquivo.isFile() && arquivo.exists() ? true : false;
     }
 
-    /* O método é responsável por retornar o arquivo informado.
+    /*
+     * O método é responsável por retornar o arquivo informado.
+     * 
      * @param nomeDiretorio
-     * @param nomeArquivo  
+     * 
+     * @param nomeArquivo
+     * 
      * @return boolean O objeto de classe File
      */
     public static File getArquivo(String nomeDiretorio, String nomeArquivo) {
@@ -96,8 +116,12 @@ public class Main {
         return arquivo;
     }
 
-    /* O método é responsável por verificar se a mensagem fora enviada a tempo suficiente para receber timeout, quandor recebido um pacote de response.
+    /*
+     * O método é responsável por verificar se a mensagem fora enviada a tempo
+     * suficiente para receber timeout, quandor recebido um pacote de response.
+     * 
      * @param inicial O momento de envio da mensagem
+     * 
      * @return boolean O valor booleano referente ao timeout.
      */
     public static boolean verificaTimeoutMensagem(Date inicial) {
@@ -108,23 +132,29 @@ public class Main {
         long duracao = agora.getTime() - inicial.getTime();
 
         return duracao >= tempoTimeout ? true : false;
-            
+
     }
 
-    /* O método é responsável por indicar timeout na mensagem caso não seja recebido o pacote de response.
-     * Assim, é criada uma thread com sleep de 30 segundos, após esse tempo é verificada a presença do arquivo
+    /*
+     * O método é responsável por indicar timeout na mensagem caso não seja recebido
+     * o pacote de response.
+     * Assim, é criada uma thread com sleep de 30 segundos, após esse tempo é
+     * verificada a presença do arquivo
      * no diretorio do peer. Caso negativo, entende-se que houve um timeout.
+     * 
      * @param nomeDiretorio
+     * 
      * @param nomeArquivo
      */
     public static void verificaResposta(String nomeDiretorio, String nomeArquivo) {
         (new Thread() {
             @Override
             public void run() {
-                //Pause for 4 seconds
+                // Pause for 4 seconds
                 try {
                     Thread.sleep(30000);
-                    if (!verificaArquivo(nomeDiretorio, nomeArquivo)) System.out.println("ninguém no sistema possui o arquivo " + nomeArquivo);
+                    if (!verificaArquivo(nomeDiretorio, nomeArquivo))
+                        System.out.println("ninguém no sistema possui o arquivo " + nomeArquivo);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -133,22 +163,37 @@ public class Main {
         }).start();
     }
 
-    /* O método é responsável por iniciar o socket no peer. As funcionalidades presentes são as seguintes:
+    /*
+     * O método é responsável por iniciar o socket no peer. As funcionalidades
+     * presentes são as seguintes:
      * - Inicialização do socket via "new DatagramSocket"
      * - Recebimento de pacotes
-     * - Verificar se a mensagem recebida no pacote é um response, através da propriedade isResponse da classe Mensagem.
-     *   - Caso positivo, verifica-se se a mensagem já fora processada, através do array de responses.
-     *   - Caso negativo, há a possibilidade de ser um timeout ou o encaminhamento para o próximo peer
-     *     - É verificada a propriedade isTimeout da classe Mensagem, printando a mensagem descrita no EP
-     *     - Caso seja necessário encaminhar a mensagem para outros peers, leva-se em conta se a mensagem já fora
-     *       encaminhada para os peers "alvos", para que não haja disperdício de reprocessamento.
+     * - Verificar se a mensagem recebida no pacote é um response, através da
+     * propriedade isResponse da classe Mensagem.
+     * - Caso positivo, verifica-se se a mensagem já fora processada, através do
+     * array de responses.
+     * - Caso negativo, há a possibilidade de ser um timeout ou o encaminhamento
+     * para o próximo peer
+     * - É verificada a propriedade isTimeout da classe Mensagem, printando a
+     * mensagem descrita no EP
+     * - Caso seja necessário encaminhar a mensagem para outros peers, leva-se em
+     * conta se a mensagem já fora
+     * encaminhada para os peers "alvos", para que não haja disperdício de
+     * reprocessamento.
      * Vale ressaltar que a inicialização utiliza-se do sistema de Threads.
      * 
      * @param port Valor inteiro para criação do socket na porta informada
-     * @param nomeDiretorio  
-     * @param clientSocket Socket para encaminhamento de mensagem para outros peers, seja para envio do arquivo ou para continuidade da procura
+     * 
+     * @param nomeDiretorio
+     * 
+     * @param clientSocket Socket para encaminhamento de mensagem para outros peers,
+     * seja para envio do arquivo ou para continuidade da procura
+     * 
      * @param serverInfos informações do servidor no formato IPV4:PORTA
-     * @param responses Respostas já recebidas pelo peer, para não processá-las novamente
+     * 
+     * @param responses Respostas já recebidas pelo peer, para não processá-las
+     * novamente
+     * 
      * @param peers Vizinhos informados na inicialização
      */
     public static void iniciaSocket(int port, String nomeDiretorio, DatagramSocket clientSocket, String serverInfos,
@@ -220,11 +265,10 @@ public class Main {
                             } else {
                                 // Seleciona um vizinho aleatoriamente
                                 int numeroPeer = (int) Math.round(Math.random());
-                                
 
                                 // Cria controle de pesquisa
                                 boolean jaPesquisado = false;
-                                
+
                                 // Primeira tentativa
                                 for (String pesquisado : msg.getHistoricoPeer()) {
                                     if (pesquisado.contains(peers[numeroPeer])) {
@@ -234,8 +278,10 @@ public class Main {
 
                                 // Muda o nó escolhido
                                 if (jaPesquisado) {
-                                    if (numeroPeer == 0) numeroPeer = 1;
-                                    else numeroPeer = 0;
+                                    if (numeroPeer == 0)
+                                        numeroPeer = 1;
+                                    else
+                                        numeroPeer = 0;
                                 }
 
                                 // Segunda tentativa
@@ -243,19 +289,21 @@ public class Main {
                                 for (String pesquisado : msg.getHistoricoPeer()) {
                                     if (pesquisado.contains(peers[numeroPeer])) {
                                         jaPesquisado = true;
-                                        System.out.println("Não tenho " + msg.getNomeArquivo() + ", e meus vizinhos também não.");
+                                        System.out.println(
+                                                "Não tenho " + msg.getNomeArquivo() + ", e meus vizinhos também não.");
                                     }
                                 }
-                                
+
                                 // Caso algum dos vizinhos ainda não tenha processado a mensagem
                                 if (!jaPesquisado) {
                                     String ipDestino = getIp(peers[numeroPeer]);
                                     int portaDestino = getPorta(peers[numeroPeer]);
-                                    
+
                                     // Adiciona a si próprio na lista de peers procurados
                                     msg.addHistoricoPeer(serverInfos);
                                     //
-                                    System.out.println("Não tenho " + msg.getNomeArquivo() + ", encaminhando para " + peers[numeroPeer]);
+                                    System.out.println("Não tenho " + msg.getNomeArquivo() + ", encaminhando para "
+                                            + peers[numeroPeer]);
                                     // Envia mensagem
                                     encaminhaMensagem(clientSocket, msg, ipDestino, portaDestino);
                                 }
@@ -328,7 +376,8 @@ public class Main {
         }).start();
     }
 
-    public static void encaminhaMensagem(DatagramSocket clientSocket, Mensagem mensagem, String ipDestino, int portaDestino) throws IOException {
+    public static void encaminhaMensagem(DatagramSocket clientSocket, Mensagem mensagem, String ipDestino,
+            int portaDestino) throws IOException {
         (new Thread() {
             @Override
             public void run() {
@@ -354,22 +403,29 @@ public class Main {
     }
 
     static void periodicPrint(String peerInfos, String nomeDiretorio) {
-        Runnable runnable = new Runnable() {
+        (new Thread() {
+            @Override
             public void run() {
-                File diretorio = new File(nomeDiretorio);
-                File arquivos[] = diretorio.listFiles();
-                System.out.print("Sou peer " + peerInfos + " com os arquivos ");
+                // Pause for 4 seconds
+                while (true) {
+                    try {
+                        Thread.sleep(30000);
+                        File diretorio = new File(nomeDiretorio);
+                        File arquivos[] = diretorio.listFiles();
+                        System.out.print("Sou peer " + peerInfos + " com os arquivos ");
 
-                for (File arquivo : arquivos) {
-                    System.out.print(arquivo.getName() + " ");
+                        for (File arquivo : arquivos) {
+                            System.out.print(arquivo.getName() + " ");
+                        }
+
+                        System.out.print("\n");
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
-
-                System.out.print("\n");
             }
-        };
 
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(runnable, 30, 30, TimeUnit.SECONDS);
+        }).start();
     }
 
     public static void main(String[] args) throws Exception {
