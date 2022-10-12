@@ -92,9 +92,7 @@ public class Main {
      * informado.
      * 
      * @param nomeDiretorio
-     * 
      * @param nomeArquivo
-     * 
      * @return boolean O valor booleano referente a existência do arquivo.
      */
     public static boolean verificaArquivo(String nomeDiretorio, String nomeArquivo) {
@@ -150,7 +148,6 @@ public class Main {
         (new Thread() {
             @Override
             public void run() {
-                // Pause for 4 seconds
                 try {
                     Thread.sleep(30000);
                     if (!verificaArquivo(nomeDiretorio, nomeArquivo))
@@ -250,7 +247,9 @@ public class Main {
                             if (verificaTimeoutMensagem(msg.getHorarioDeEnvio())) {
                                 msg.setIsResponse(false);
                                 msg.setIsTimeout(true);
-                                retornaMensagem(clientSocket, msg);
+                                String ipDestino = getIp(msg.getSenderInfos());
+                                int portaDestino = getPorta(msg.getSenderInfos());
+                                retornaMensagem(clientSocket, msg, ipDestino, portaDestino);
                             }
                             // Se a mensagem recebida pelo socket é de procura do arquivo
                             String arquivo = msg.getNomeArquivo();
@@ -320,13 +319,22 @@ public class Main {
         }).start();
     }
 
-    public static void enviaMensagem(DatagramSocket clientSocket, String serverInfos, String arquivoBuscado,
-            String ipDestino, int portaDestino) {
+    /*
+     * O método é responsável por relizar o envio de mensagens aos peers
+     * Assim, é criada uma thread com sleep de 30 segundos, após esse tempo é
+     * verificada a presença do arquivo
+     * no diretorio do peer. Caso negativo, entende-se que houve um timeout.
+     * 
+     * @param clientSocket Socket para encaminhamento de mensagem para outros peers
+     * @param serverInfos informações do servidor no formato IPV4:PORTA
+     * @param nomeArquivo
+     * @param ipDestino IP para qual será realizado o envio da mensagem
+     * @param portaDestino Porta para qual será realizado o envio da mensagem
+     */
+    public static void enviaMensagem(DatagramSocket clientSocket, Mensagem mensagem, String ipDestino, int portaDestino) {
         (new Thread() {
             @Override
             public void run() {
-                // Cria objeto de mensagem
-                Mensagem mensagem = new Mensagem(serverInfos, arquivoBuscado, false, false);
                 try {
                     // declaração e preenchimento do buffer de envio
                     ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
@@ -348,7 +356,19 @@ public class Main {
         }).start();
     }
 
-    public static void retornaMensagem(DatagramSocket clientSocket, Mensagem mensagem) throws IOException {
+    /*
+     * O método é responsável por relizar o envio de mensagens aos peers
+     * Assim, é criada uma thread com sleep de 30 segundos, após esse tempo é
+     * verificada a presença do arquivo
+     * no diretorio do peer. Caso negativo, entende-se que houve um timeout.
+     * 
+     * @param clientSocket Socket para encaminhamento de mensagem para outros peers
+     * @param serverInfos informações do servidor no formato IPV4:PORTA
+     * @param nomeArquivo
+     * @param ipDestino IP para qual será realizado o envio da mensagem
+     * @param portaDestino Porta para qual será realizado o envio da mensagem
+     */
+    public static void retornaMensagem(DatagramSocket clientSocket, Mensagem mensagem, String ipDestino, int portaDestino) throws IOException {
         (new Thread() {
             @Override
             public void run() {
@@ -401,7 +421,12 @@ public class Main {
 
         }).start();
     }
-
+  
+    /*
+     * O método é responsável por relizar o print periódico dos arquivos presentes no peer. Para isso, utiliza-se a função Thread.sleep e em sequência a lógica de verificação de arquivos.
+     * @param peerInfos informações do servidor no formato IPV4:PORTA
+     * @param nomeDiretorio 
+     */
     static void periodicPrint(String peerInfos, String nomeDiretorio) {
         (new Thread() {
             @Override
@@ -455,9 +480,12 @@ public class Main {
         // Cria o clientSocket
         DatagramSocket clientSocket = new DatagramSocket();
 
+        // loop infinito para manter o funcionamento das ações enquanto a aplicação estiver rodando
         while (true) {
             System.out.println("\nMenu de acoes.");
             System.out.println("Digite uma opção:");
+
+            // Se o peer já foi inicializado, não mostra a opção de inicialização
             if (!isInitialized)
                 System.out.println("1 - INICIALIZA");
             System.out.println("2 - SEARCH");
@@ -475,14 +503,18 @@ public class Main {
                     if (!infoValida(serverInfos))
                         break;
 
+                    // Coleta informações do primeiro vizinho
                     System.out.println("\nNecessario informar dois vizinhos");
                     System.out.println("\nInforme o IP:PORTA do primeiro vizinho");
                     peers[0] = entrada.nextLine();
+                    // Valida as informações coletadas
                     if (!infoValida(peers[0]))
                         break;
 
+                    // Coleta informações do segundo vizinho
                     System.out.println("\nInforme o IP:PORTA do segundo vizinho");
                     peers[1] = entrada.nextLine();
+                    // Valida as informações coletadas
                     if (!infoValida(peers[1]))
                         break;
 
@@ -534,8 +566,10 @@ public class Main {
                     String ipDestino = getIp(peers[numeroPeer]);
                     int portaDestino = getPorta(peers[numeroPeer]);
 
+                    // Cria mensagem
+                    Mensagem mensagem = new Mensagem(serverInfos, nomeArquivo, false, false);
                     // Envia mensagem
-                    enviaMensagem(clientSocket, serverInfos, arquivoBuscado, ipDestino, portaDestino);
+                    enviaMensagem(clientSocket, mensagem, ipDestino, portaDestino);
 
                     // Adiciona no histórico
                     historicoSearch.add(arquivoBuscado);
