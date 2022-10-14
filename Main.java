@@ -178,7 +178,7 @@ public class Main {
      * encaminhada para os peers "alvos", para que não haja disperdício de
      * reprocessamento.
      * Vale ressaltar que a inicialização utiliza-se do sistema de Threads.
-     * 
+     * Funcionalidade: 4.a)
      * @param port Valor inteiro para criação do socket na porta informada
      * 
      * @param nomeDiretorio
@@ -249,7 +249,7 @@ public class Main {
                                 msg.setIsTimeout(true);
                                 String ipDestino = getIp(msg.getSenderInfos());
                                 int portaDestino = getPorta(msg.getSenderInfos());
-                                retornaMensagem(clientSocket, msg, ipDestino, portaDestino);
+                                enviaMensagem(clientSocket, msg, ipDestino, portaDestino);
                             }
                             // Se a mensagem recebida pelo socket é de procura do arquivo
                             String arquivo = msg.getNomeArquivo();
@@ -260,7 +260,9 @@ public class Main {
                                 msg.setIsResponse(true);
                                 msg.setPeerResponse(serverInfos);
                                 System.out.println("tem o arquivo");
-                                retornaMensagem(clientSocket, msg);
+                                String ipDestino = getIp(msg.getSenderInfos());
+                                int portaDestino = getPorta(msg.getSenderInfos());
+                                enviaMensagem(clientSocket, msg);
                             } else {
                                 // Seleciona um vizinho aleatoriamente
                                 int numeroPeer = (int) Math.round(Math.random());
@@ -304,7 +306,7 @@ public class Main {
                                     System.out.println("Não tenho " + msg.getNomeArquivo() + ", encaminhando para "
                                             + peers[numeroPeer]);
                                     // Envia mensagem
-                                    encaminhaMensagem(clientSocket, msg, ipDestino, portaDestino);
+                                    enviaMensagem(clientSocket, msg, ipDestino, portaDestino);
                                 }
                             }
                         }
@@ -321,83 +323,13 @@ public class Main {
 
     /*
      * O método é responsável por relizar o envio de mensagens aos peers
-     * Assim, é criada uma thread com sleep de 30 segundos, após esse tempo é
-     * verificada a presença do arquivo
-     * no diretorio do peer. Caso negativo, entende-se que houve um timeout.
      * 
      * @param clientSocket Socket para encaminhamento de mensagem para outros peers
-     * @param serverInfos informações do servidor no formato IPV4:PORTA
-     * @param nomeArquivo
+     * @param mensagem
      * @param ipDestino IP para qual será realizado o envio da mensagem
      * @param portaDestino Porta para qual será realizado o envio da mensagem
      */
     public static void enviaMensagem(DatagramSocket clientSocket, Mensagem mensagem, String ipDestino, int portaDestino) {
-        (new Thread() {
-            @Override
-            public void run() {
-                try {
-                    // declaração e preenchimento do buffer de envio
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
-                    ObjectOutputStream oos = new ObjectOutputStream(baos);
-                    oos.writeObject(mensagem);
-                    final byte[] sendMessage = baos.toByteArray();
-
-                    // Criação do datagrama com endereço e porta do host remoto
-                    DatagramPacket sendPacket = new DatagramPacket(sendMessage, sendMessage.length,
-                            InetAddress.getByName(ipDestino), portaDestino);
-
-                    clientSocket.send(sendPacket);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            }
-
-        }).start();
-    }
-
-    /*
-     * O método é responsável por relizar o envio de mensagens aos peers
-     * Assim, é criada uma thread com sleep de 30 segundos, após esse tempo é
-     * verificada a presença do arquivo
-     * no diretorio do peer. Caso negativo, entende-se que houve um timeout.
-     * 
-     * @param clientSocket Socket para encaminhamento de mensagem para outros peers
-     * @param serverInfos informações do servidor no formato IPV4:PORTA
-     * @param nomeArquivo
-     * @param ipDestino IP para qual será realizado o envio da mensagem
-     * @param portaDestino Porta para qual será realizado o envio da mensagem
-     */
-    public static void retornaMensagem(DatagramSocket clientSocket, Mensagem mensagem, String ipDestino, int portaDestino) throws IOException {
-        (new Thread() {
-            @Override
-            public void run() {
-                try {
-                    // declaração e preenchimento do buffer de envio
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
-                    ObjectOutputStream oos = new ObjectOutputStream(baos);
-                    oos.writeObject(mensagem);
-                    final byte[] sendMessage = baos.toByteArray();
-
-                    String ipDestino = getIp(mensagem.getSenderInfos());
-                    int portaDestino = getPorta(mensagem.getSenderInfos());
-
-                    // Criação do datagrama com endereço e porta do host remoto
-                    DatagramPacket sendPacket = new DatagramPacket(sendMessage, sendMessage.length,
-                            InetAddress.getByName(ipDestino), portaDestino);
-
-                    clientSocket.send(sendPacket);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            }
-
-        }).start();
-    }
-
-    public static void encaminhaMensagem(DatagramSocket clientSocket, Mensagem mensagem, String ipDestino,
-            int portaDestino) throws IOException {
         (new Thread() {
             @Override
             public void run() {
@@ -567,7 +499,7 @@ public class Main {
                     int portaDestino = getPorta(peers[numeroPeer]);
 
                     // Cria mensagem
-                    Mensagem mensagem = new Mensagem(serverInfos, nomeArquivo, false, false);
+                    Mensagem mensagem = new Mensagem(serverInfos, arquivoBuscado, false, false);
                     // Envia mensagem
                     enviaMensagem(clientSocket, mensagem, ipDestino, portaDestino);
 
