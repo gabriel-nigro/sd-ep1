@@ -225,6 +225,7 @@ public class Main {
                         // Se a mensagem recebida pelo socket é um response
                         if (msg.getIsResponse()) {
                             // Verifica se já fora realizada alguma busca para o arquivo informado
+                            // Funcionalidade: 4.f) já processadas
                             boolean jaProcessada = false;
                             for (String response : responses) {
                                 if (response.contains(msg.getNomeArquivo())) {
@@ -255,6 +256,7 @@ public class Main {
                             String arquivo = msg.getNomeArquivo();
                             // Verifica se o arquivo existe no diretório informado na inicialização
                             // Caso exista, o mesmo é enviado para o peer solicitante
+                            // Funcionalidade: 4.e) responde diretamente a quem inicialmente realizou o search
                             if (verificaArquivo(nomeDiretorio, arquivo)) {
                                 msg.setConteudoArquivo(getArquivo(nomeDiretorio, arquivo));
                                 msg.setIsResponse(true);
@@ -302,7 +304,7 @@ public class Main {
 
                                     // Adiciona a si próprio na lista de peers procurados
                                     msg.addHistoricoPeer(serverInfos);
-                                    //
+                                    // Funcionalidade: 4.e) não tem, logo encaminha
                                     System.out.println("Não tenho " + msg.getNomeArquivo() + ", encaminhando para "
                                             + peers[numeroPeer]);
                                     // Envia mensagem
@@ -356,6 +358,7 @@ public class Main {
   
     /*
      * O método é responsável por relizar o print periódico dos arquivos presentes no peer. Para isso, utiliza-se a função Thread.sleep e em sequência a lógica de verificação de arquivos.
+     * Funcionalidade: 4.c)
      * @param peerInfos informações do servidor no formato IPV4:PORTA
      * @param nomeDiretorio 
      */
@@ -363,7 +366,6 @@ public class Main {
         (new Thread() {
             @Override
             public void run() {
-                // Pause for 4 seconds
                 while (true) {
                     try {
                         Thread.sleep(30000);
@@ -425,6 +427,7 @@ public class Main {
 
             switch (acao) {
                 case 1: {
+                    // Funcionalidade 4.b)
                     if (isInitialized) {
                         System.out.println("\nO peer encontra-se inicializado.");
                         break;
@@ -468,6 +471,8 @@ public class Main {
                     break;
                 }
                 case 2: {
+                    // Funcionalidade: 4.d)
+                  
                     // Verifica se o servidor já foi inicializado
                     if (!isInitialized) {
                         System.out
@@ -484,7 +489,7 @@ public class Main {
                         System.out.println("O peer já possui o arquivo.");
                         break;
                     }
-
+                    // Funcionalidade: 4.e) já processadas
                     // Verifica se já fora realizada alguma busca para o arquivo informado
                     for (String historico : historicoSearch) {
                         if (historico.contains(arquivoBuscado)) {
