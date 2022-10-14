@@ -261,10 +261,10 @@ public class Main {
                                 msg.setConteudoArquivo(getArquivo(nomeDiretorio, arquivo));
                                 msg.setIsResponse(true);
                                 msg.setPeerResponse(serverInfos);
-                                System.out.println("tem o arquivo");
+                                System.out.println("Tenho o arquivo " + msg.getNomeArquivo() + ". Encaminhando para " + msg.getSenderInfos());
                                 String ipDestino = getIp(msg.getSenderInfos());
                                 int portaDestino = getPorta(msg.getSenderInfos());
-                                enviaMensagem(clientSocket, msg);
+                                enviaMensagem(clientSocket, msg, ipDestino, portaDestino);
                             } else {
                                 // Seleciona um vizinho aleatoriamente
                                 int numeroPeer = (int) Math.round(Math.random());

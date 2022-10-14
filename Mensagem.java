@@ -1,3 +1,4 @@
+// Lib para serializar os objetos enviados e recebidos via socket
 import java.io.Serializable;
 // Lib para leitura de arquivos
 import java.io.File;
