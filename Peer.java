@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 import java.util.Date;
 import static java.util.concurrent.TimeUnit.*;
 
-public class Main {
+public class Peer {
     private static Scanner entrada;
 
     /*
@@ -484,11 +484,6 @@ public class Main {
                     System.out.println("\nDigite o arquivo com a sua extensão:");
                     String arquivoBuscado = entrada.nextLine();
 
-                    // Verifica se o arquivo já existe
-                    if (verificaArquivo(nomeDiretorio, arquivoBuscado)) {
-                        System.out.println("O peer já possui o arquivo.");
-                        break;
-                    }
                     // Funcionalidade: 4.e) já processadas
                     // Verifica se já fora realizada alguma busca para o arquivo informado
                     for (String historico : historicoSearch) {
@@ -496,6 +491,12 @@ public class Main {
                             System.out.println("Requisição já processada para " + arquivoBuscado);
                             break;
                         }
+                    }
+                    
+                    // Verifica se o arquivo já existe
+                    if (verificaArquivo(nomeDiretorio, arquivoBuscado)) {
+                        System.out.println("O peer já possui o arquivo.");
+                        break;
                     }
 
                     // Seleciona um vizinho aleatoriamente
@@ -516,6 +517,9 @@ public class Main {
 
                     break;
                 }
+                default:
+                    System.out.println("Ação incorreta. Informe uma ação válida.");
+                    break;
             }
 
         }
