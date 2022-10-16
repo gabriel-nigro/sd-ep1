@@ -513,6 +513,7 @@ public class Peer {
                     historicoSearch.add(arquivoBuscado);
 
                     // Responde com timeout
+                    // Funcionalidade 4.g)
                     verificaResposta(nomeDiretorio, arquivoBuscado);
 
                     break;
